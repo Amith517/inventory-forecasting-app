@@ -63,6 +63,7 @@ def record_alert(product_id, alert_type, message):
 # ---------------------------------------------------------
 def send_daily_essential_forecast():
     from modules.forecasting import generate_forecast_for_product
+    from modules.database import get_connection
 
     conn = get_connection()
     cur = conn.cursor()
@@ -81,6 +82,7 @@ def send_daily_essential_forecast():
         conn.close()
         return
 
+    # 🔥 BUILD ONE COMBINED MESSAGE
     message = "📊 Essential Products Report\n\n"
 
     for r in rows:
@@ -89,22 +91,22 @@ def send_daily_essential_forecast():
         stock = r["current_stock"]
         min_stock = r["min_stock"]
 
-        message += f"{name}\nStock: {stock}\nMin: {min_stock}\n"
+        message += f"\n{name}\n"
+        message += f"Stock: {stock}\n"
+        message += f"Min Stock: {min_stock}\n"
 
+        # only forecast if needed
         if min_stock is not None and stock <= min_stock:
             fc = generate_forecast_for_product(pid, 1)
             next_day = round(fc.iloc[0], 2) if fc is not None else 0
             message += f"⚠️ Tomorrow Demand: {next_day}\n"
 
-        message += "---------------------\n"
-
-        record_alert(pid, "essential", message)
+        message += "------------------------\n"
 
     conn.close()
 
-    send_email(SMTP_USER, "Essential Products Report", message)
-
-
+    # 🔥 SEND ONLY ONE EMAIL
+    send_email(SMTP_USER, "Essential Products Daily Report", message)
 # ---------------------------------------------------------
 # ✅ NON-ESSENTIAL EMAIL (FIXED)
 # ---------------------------------------------------------

@@ -2,22 +2,41 @@ import schedule
 import time
 from threading import Thread
 
+from modules.inventory_manager import get_all_products, check_slow_moving
 
+
+# ---------------------------------------------------------
+# ✅ CHECK ALL PRODUCTS (NEW)
+# ---------------------------------------------------------
+def check_all_products():
+    print("🔄 Running daily slow-moving check...")
+
+    products = get_all_products()
+
+    for p in products:
+        pid = p["product_id"]
+        check_slow_moving(pid)
+
+    print("✅ Daily check completed")
+
+
+# ---------------------------------------------------------
+# ✅ START SCHEDULER
+# ---------------------------------------------------------
 def start_scheduler():
-    from modules.alerts import (
-        send_daily_essential_forecast,
-        send_non_essential_forecast
-    )
+    schedule.clear()
 
-    # ✅ ESSENTIAL → DAILY AT 9 PM
-    schedule.every().day.at("21:00").do(send_daily_essential_forecast)
+    # 🔥 RUN EVERY DAY AT 3:30 PM
+    schedule.every().day.at("15:30").do(check_all_products)
 
-    # ✅ NON-ESSENTIAL → CHECK EVERY HOUR
-    schedule.every(1).hours.do(send_non_essential_forecast)
+    # (Optional testing — uncomment)
+    # schedule.every(1).minutes.do(check_all_products)
 
-    def run():
+    def run_loop():
         while True:
             schedule.run_pending()
             time.sleep(1)
 
-    Thread(target=run, daemon=True).start()
+    t = Thread(target=run_loop, daemon=True)
+    t.start()
+    return t

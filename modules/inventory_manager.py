@@ -6,12 +6,16 @@ from modules.config import SMTP_USER
 from datetime import datetime, timedelta
 
 
+# -------------------------------------------------------
+# GET ALL PRODUCTS
+# -------------------------------------------------------
 def get_all_products():
     conn = get_connection()
     cur = conn.cursor()
 
     cur.execute("""
-    SELECT p.product_id, p.name,p.price, p.min_stock, p.early_warning_stock,
+    SELECT p.product_id, p.name, p.price,
+           p.min_stock, p.early_warning_stock,
            p.is_essential,
            IFNULL(i.current_stock,0) as current_stock
     FROM products p
@@ -23,6 +27,9 @@ def get_all_products():
     return [dict(r) for r in rows]
 
 
+# -------------------------------------------------------
+# SET MIN STOCK
+# -------------------------------------------------------
 def set_min_stock(product_id, min_stock, early_warning):
     try:
         min_stock = int(min_stock)
@@ -48,6 +55,9 @@ def set_min_stock(product_id, min_stock, early_warning):
     return True, "OK"
 
 
+# -------------------------------------------------------
+# UPDATE STOCK
+# -------------------------------------------------------
 def update_stock(product_id, qty):
     conn = get_connection()
     cur = conn.cursor()
@@ -81,7 +91,7 @@ def update_stock(product_id, qty):
 
 
 # -------------------------------------------------------
-# 🔥 FIXED FUNCTION
+# RECORD SALE
 # -------------------------------------------------------
 def adjust_stock_by_sale(product_id, qty):
     conn = get_connection()
@@ -111,18 +121,15 @@ def adjust_stock_by_sale(product_id, qty):
     conn.commit()
     conn.close()
 
-    # ✅ EXISTING LOGIC
     generate_forecast_for_product(product_id)
     check_and_handle_alert(product_id)
-
-    # 🔥🔥 IMPORTANT ADDITION
     check_slow_moving(product_id)
 
     return new_stock
 
 
 # -------------------------------------------------------
-# ✅ SLOW MOVING LOGIC
+# ✅ SLOW MOVING LOGIC (FIXED WITH COOLDOWN)
 # -------------------------------------------------------
 def check_slow_moving(product_id):
     series = get_daily_sales_series(product_id)
@@ -143,18 +150,45 @@ def check_slow_moving(product_id):
     """, (product_id,))
 
     row = cur.fetchone()
+
+    if not row:
+        conn.close()
+        return
+
+    name = row["name"]
+    stock = row["stock"]
+
+    # 🔥 CONDITION
+    if avg < 2 and stock > 20:
+
+        discount = min(50, int((stock/(avg+1))*5))
+        msg = f"{name} slow moving. Suggested discount: {discount}%"
+
+        # 🔥 COOLDOWN CHECK (24 HOURS)
+        cur.execute("""
+        SELECT sent_at FROM alerts
+        WHERE product_id=? AND alert_type='slow_moving'
+        ORDER BY sent_at DESC LIMIT 1
+        """, (product_id,))
+
+        last = cur.fetchone()
+
+        allow_send = True
+
+        if last:
+            last_time = datetime.fromisoformat(last["sent_at"])
+            if datetime.now() - last_time < timedelta(hours=24):
+                allow_send = False
+
+        if allow_send:
+            send_email(SMTP_USER, "Slow Moving Alert", msg)
+            record_alert(product_id, "slow_moving", msg)
+
     conn.close()
-
-    if avg < 2 and row["stock"] > 20:
-        discount = min(50, int((row["stock"]/(avg+1))*5))
-        msg = f"{row['name']} slow moving. Suggested discount: {discount}%"
-
-        record_alert(product_id, "slow_moving", msg)
-        send_email(SMTP_USER, "Slow Moving Alert", msg)
 
 
 # -------------------------------------------------------
-# ✅ ALERT LOGIC
+# LOW STOCK ALERT
 # -------------------------------------------------------
 def check_and_handle_alert(product_id):
 
@@ -179,7 +213,6 @@ def check_and_handle_alert(product_id):
     current = row["current_stock"]
     min_stock = row["min_stock"]
 
-    # 🔍 get last alert time
     cur.execute("""
     SELECT sent_at FROM alerts
     WHERE product_id=? AND alert_type='low_stock'
@@ -218,3 +251,4 @@ Action Required: Restock immediately.
             record_alert(product_id, "low_stock", msg)
 
     conn.close()
+    
