@@ -1,0 +1,5 @@
+1. in products section for is_essential products change the color for yes/no only the selected one is visible both yes and no should be visible to the user so that they can see them clearly
+2. while recording a sale it is showing "enter to apply" but it is not applying fix this.
+3. while recording a sale we can see current stock, change it color so that it will be highlighted. The color should be visible 
+4.in home page remove live status section on the left
+5. how stock health is calculated?
