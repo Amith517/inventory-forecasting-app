@@ -593,15 +593,6 @@ if active == "Home":
             st.markdown('<div class="empty-state"><div style="font-size:3rem;margin-bottom:16px">📭</div><div class="empty-title">No products found</div><div class="empty-sub">Import a CSV to get started</div></div>', unsafe_allow_html=True)
 
     with col_right:
-        section_label("Email Triggers")
-        st.markdown('<div class="card"><div class="card-title">Forecast Emails</div><div class="card-body">Manually trigger alert emails for testing the notification system.</div></div>', unsafe_allow_html=True)
-        st.markdown('<div class="email-btn-wrap">', unsafe_allow_html=True)
-
-        if st.button("📧  Non-Essential Forecast", use_container_width=True):
-            with st.spinner("Sending..."):
-                send_non_essential_forecast()
-            st.success("Email sent!")
-        st.markdown("</div>", unsafe_allow_html=True)
 
         if not df.empty and "current_stock" in df.columns and "min_stock" in df.columns:
             healthy = total_products - low_ct
