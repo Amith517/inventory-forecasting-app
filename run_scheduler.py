@@ -1,5 +1,6 @@
 from modules.alerts import send_daily_essential_forecast
 
-print("Running scheduler task...")
-send_daily_essential_forecast()
-print("Task completed.")
+if __name__ == "__main__":
+    print("🚀 Running daily essential forecast...")
+    send_daily_essential_forecast()
+    print("✅ Email task completed.")
