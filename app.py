@@ -12,7 +12,9 @@ from modules.inventory_manager import (
 )
 import load_products_from_csv
 
-start_scheduler()
+if "scheduler_started" not in st.session_state:
+    start_scheduler()
+    st.session_state.scheduler_started = True
 
 st.set_page_config(
     layout="wide",
@@ -153,14 +155,23 @@ section[data-testid="stMain"] > div,
 .pill-red   { background:rgba(239,68,68,.18);  color:#f87171 !important; -webkit-text-fill-color:#f87171 !important; border:1px solid rgba(239,68,68,.3); }
 .pill-blue  { background:rgba(59,130,246,.18); color:#60a5fa !important; -webkit-text-fill-color:#60a5fa !important; border:1px solid rgba(59,130,246,.3); }
 
-/* ── Stock display ── */
+/* ── Stock display — bigger integer, vivid color, unchanged background ── */
 .stock-display {
     display:inline-flex; flex-direction:column; gap:2px;
     background:#1d2436; border:1px solid #2d384f; border-radius:12px;
     padding:14px 20px; margin:12px 0 18px 0;
 }
-.stock-display-label { font-size:.65rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#7eb3ff !important; -webkit-text-fill-color:#7eb3ff !important; }
-.stock-display-value { font-size:1.75rem; font-weight:800; letter-spacing:-0.04em; font-family:'Outfit',sans-serif !important; line-height:1; }
+.stock-display-label {
+    font-size:.65rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+    color:#7eb3ff !important; -webkit-text-fill-color:#7eb3ff !important;
+}
+.stock-display-value {
+    font-size:2.6rem !important;
+    font-weight:800 !important;
+    letter-spacing:-0.04em;
+    font-family:'Outfit',sans-serif !important;
+    line-height:1;
+}
 
 /* ── Insight cards ── */
 .insight-card { border-radius:12px; padding:16px 18px; display:flex; align-items:flex-start; gap:14px; margin-bottom:18px; }
@@ -225,6 +236,23 @@ div[data-testid] label, div[data-testid] label p, div[data-testid] label span {
 [data-testid="stNumberInput"] input:focus { border-color:#3b82f6 !important; box-shadow:0 0 0 3px rgba(59,130,246,.25) !important; outline:none !important; }
 [data-testid="stNumberInput"] button { background:#161c2a !important; border-color:#242d40 !important; color:#94a3b8 !important; -webkit-text-fill-color:#94a3b8 !important; }
 
+/* FIX 3: Hide "Press Enter to apply" tooltip — Streamlit renders it via
+   data-testid="InputInstructions" inside the number input wrapper.
+   We target every known variant to be version-proof. */
+[data-testid="InputInstructions"],
+[data-testid="stNumberInput"] [data-testid="InputInstructions"],
+[data-testid="stNumberInput"] ~ div[class*="instructions"],
+[data-testid="stNumberInput"] div[class*="instructions"],
+[data-testid="stNumberInput"] small,
+[data-testid="stNumberInput"] span[class*="placeholder"],
+[data-testid="stNumberInput"] div[class*="placeholder"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+
 /* ── Buttons ── */
 .stButton > button {
     background:#3b82f6 !important; color:#ffffff !important; -webkit-text-fill-color:#ffffff !important;
@@ -270,14 +298,7 @@ hr { border-color:#242d40 !important; margin:18px 0 !important; }
 
 /* ══════════════════════════════════════════════
    TABLES
-   The canvas itself is painted by glide-data-grid
-   using config.toml theme values:
-     secondaryBackgroundColor → cell bg (#1a2235)
-     textColor                → cell text (#dce8f8)
-   We only style the surrounding frame + scrollbars.
    ══════════════════════════════════════════════ */
-
-/* Outer frame */
 [data-testid="stDataFrame"],
 [data-testid="stDataEditor"] {
     border-radius: 12px !important;
@@ -285,25 +306,17 @@ hr { border-color:#242d40 !important; margin:18px 0 !important; }
     overflow: hidden !important;
     box-shadow: 0 4px 24px rgba(0,0,0,0.4) !important;
 }
-
-/* Remove any accidental white wrapper divs Streamlit adds around the canvas */
 [data-testid="stDataFrame"] > div,
 [data-testid="stDataEditor"] > div {
     border-radius: 11px !important;
     overflow: hidden !important;
 }
-
-/* Toolbar row above the table (fullscreen, download buttons) */
 [data-testid="stDataFrame"] [data-testid="stElementToolbar"],
 [data-testid="stDataEditor"] [data-testid="stElementToolbar"] {
     background: #131a27 !important;
     border-bottom: 1px solid #2d384f !important;
 }
-[data-testid="stElementToolbar"] button {
-    color: #7eb3ff !important;
-}
-
-/* Inline cell editor popup */
+[data-testid="stElementToolbar"] button { color: #7eb3ff !important; }
 [data-testid="stDataEditor"] input,
 [data-testid="stDataEditor"] textarea,
 [data-testid="stDataEditor"] [contenteditable] {
@@ -314,8 +327,6 @@ hr { border-color:#242d40 !important; margin:18px 0 !important; }
     border-radius: 6px !important;
     caret-color: #60a5fa !important;
 }
-
-/* Scrollbars inside tables */
 [data-testid="stDataFrame"] ::-webkit-scrollbar,
 [data-testid="stDataEditor"] ::-webkit-scrollbar { width: 5px; height: 5px; }
 [data-testid="stDataFrame"] ::-webkit-scrollbar-track,
@@ -329,20 +340,72 @@ hr { border-color:#242d40 !important; margin:18px 0 !important; }
    YES/NO DROPDOWN  ─  body-level portal
    ══════════════════════════════════════════════ */
 [data-baseweb="popover"],
-[data-baseweb="popover"] * { background-color:#161c2a !important; color:#e2eaf8 !important; -webkit-text-fill-color:#e2eaf8 !important; border-color:#242d40 !important; }
-[data-baseweb="menu"], [data-baseweb="menu"] ul, [data-baseweb="menu"] li { background-color:#161c2a !important; border-color:#242d40 !important; }
-[data-baseweb="menu"] [role="option"], li[role="option"] {
-    background:#161c2a !important; color:#d0ddf0 !important; -webkit-text-fill-color:#d0ddf0 !important;
-    padding:8px 14px !important; font-size:.88rem !important; cursor:pointer !important;
+[data-baseweb="popover"] > div,
+[data-baseweb="popover"] > div > div {
+    background-color: #1a2235 !important;
+    border: 1px solid #2d384f !important;
+    border-radius: 8px !important;
 }
-[data-baseweb="menu"] [role="option"]:hover, li[role="option"]:hover {
-    background:#1d2842 !important; color:#ffffff !important; -webkit-text-fill-color:#ffffff !important;
+[data-baseweb="menu"],
+[data-baseweb="menu"] > ul,
+[role="listbox"] {
+    background-color: #1a2235 !important;
+    border-color: #2d384f !important;
+}
+[data-baseweb="menu"] [role="option"],
+li[role="option"],
+[role="listbox"] [role="option"],
+[role="listbox"] > li {
+    background:           #1a2235 !important;
+    background-color:     #1a2235 !important;
+    color:                #dce8f8 !important;
+    -webkit-text-fill-color: #dce8f8 !important;
+    opacity:              1 !important;
+    padding:              9px 14px !important;
+    font-size:            .88rem !important;
+    font-weight:          500 !important;
+    cursor:               pointer !important;
+}
+[data-baseweb="menu"] [role="option"] *,
+li[role="option"] *,
+[role="listbox"] [role="option"] *,
+[role="listbox"] > li * {
+    color:                #dce8f8 !important;
+    -webkit-text-fill-color: #dce8f8 !important;
+    opacity:              1 !important;
+}
+[data-baseweb="menu"] [role="option"]:hover,
+li[role="option"]:hover,
+[role="listbox"] [role="option"]:hover,
+[role="listbox"] > li:hover {
+    background:           #223050 !important;
+    background-color:     #223050 !important;
+    color:                #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+[data-baseweb="menu"] [role="option"]:hover *,
+li[role="option"]:hover *,
+[role="listbox"] [role="option"]:hover *,
+[role="listbox"] > li:hover * {
+    color:                #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
 [data-baseweb="menu"] [role="option"][aria-selected="true"],
 li[role="option"][aria-selected="true"],
-[data-baseweb="menu"] [class*="highlighted"] {
-    background:#1a3560 !important; background-color:#1a3560 !important;
-    color:#93c5fd !important; -webkit-text-fill-color:#93c5fd !important;
+[role="listbox"] [role="option"][aria-selected="true"],
+[data-baseweb="menu"] [class*="highlighted"],
+[data-baseweb="menu"] [class*="active"] {
+    background:           #1a3560 !important;
+    background-color:     #1a3560 !important;
+    color:                #93c5fd !important;
+    -webkit-text-fill-color: #93c5fd !important;
+}
+[data-baseweb="menu"] [role="option"][aria-selected="true"] *,
+li[role="option"][aria-selected="true"] *,
+[role="listbox"] [role="option"][aria-selected="true"] *,
+[data-baseweb="menu"] [class*="highlighted"] * {
+    color:                #93c5fd !important;
+    -webkit-text-fill-color: #93c5fd !important;
 }
 
 /* Email trigger buttons */
@@ -357,6 +420,8 @@ li[role="option"][aria-selected="true"],
 }
 </style>
 """, unsafe_allow_html=True)
+
+
 
 
 # ─────────────────────────────────────────────
@@ -486,23 +551,6 @@ with st.sidebar:
         label_visibility="collapsed",
     )
 
-    st.markdown('<div style="font-size:.62rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#6b7fa0;-webkit-text-fill-color:#6b7fa0;margin:20px 0 8px 0">Live Status</div>', unsafe_allow_html=True)
-    pill_class = "pill-red" if low_count_sidebar > 0 else "pill-green"
-    st.markdown(f"""
-    <div class="sidebar-status">
-        <div class="sidebar-status-row">
-            <span class="sidebar-status-label">Total Products</span>
-            <span class="pill pill-blue">{total_count}</span>
-        </div>
-        <div style="height:1px;background:#242d40;margin:6px 0"></div>
-        <div class="sidebar-status-row">
-            <span class="sidebar-status-label">Low Stock Alerts</span>
-            <span class="pill {pill_class}">{low_count_sidebar}</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-version">StockSense v2.0 &middot; Streamlit</div>', unsafe_allow_html=True)
-
 
 # ─────────────────────────────────────────────
 # ROUTE
@@ -548,7 +596,7 @@ if active == "Home":
         section_label("Email Triggers")
         st.markdown('<div class="card"><div class="card-title">Forecast Emails</div><div class="card-body">Manually trigger alert emails for testing the notification system.</div></div>', unsafe_allow_html=True)
         st.markdown('<div class="email-btn-wrap">', unsafe_allow_html=True)
-        
+
         if st.button("📧  Non-Essential Forecast", use_container_width=True):
             with st.spinner("Sending..."):
                 send_non_essential_forecast()
@@ -585,11 +633,20 @@ elif active == "Products":
             df = df.reset_index(drop=True)
             if "price" in df.columns:
                 df = df.drop(columns=["price"])
-            df["is_essential"] = df["is_essential"].fillna(0).astype(int).map({1: "Yes", 0: "No"})
+            # FIX 1: Map values cleanly — use only "Yes" / "No" (no None/blank option).
+            # fillna("No") ensures every row has a value so SelectboxColumn never
+            # auto-inserts a blank placeholder at the top of the list.
+            df["is_essential"] = df["is_essential"].map({1: "Yes", 0: "No"}).fillna("No")
             st.markdown('<p style="color:#9db0cc;font-size:.84rem;margin-bottom:14px">Edit the <strong style="color:#e2eaf8">Is Essential</strong> column inline, then click Save Changes.</p>', unsafe_allow_html=True)
             edited_df = st.data_editor(
                 df,
-                column_config={"is_essential": st.column_config.SelectboxColumn("Is Essential", options=["Yes", "No"])},
+                column_config={
+                    "is_essential": st.column_config.SelectboxColumn(
+                        "Is Essential",
+                        options=["Yes", "No"],   # FIX 1: exactly two options, no blank/None
+                        required=True,            # FIX 1: required=True removes the blank row Streamlit adds by default
+                    )
+                },
                 hide_index=True, use_container_width=True, height=440,
             )
             col_btn, _ = st.columns([1, 5])
@@ -597,7 +654,8 @@ elif active == "Products":
                 if st.button("💾  Save Changes"):
                     conn = get_connection(); cur = conn.cursor()
                     for _, row in edited_df.iterrows():
-                        pid = int(row["product_id"]); val = 1 if row["is_essential"] == "Yes" else 0
+                        pid = int(row["product_id"])
+                        val = 1 if row["is_essential"] == "Yes" else 0
                         cur.execute("UPDATE products SET is_essential=? WHERE product_id=?", (val, pid))
                         if val == 1:
                             cur.execute("INSERT OR IGNORE INTO essential_products(product_id) VALUES(?)", (pid,))
@@ -631,8 +689,14 @@ elif active == "Products":
                         if early_warning <= min_stock:
                             st.error("Early Warning must be greater than Min Stock")
                         else:
-                            ok, msg = set_min_stock(pid, int(min_stock), int(early_warning))
-                            st.success("Thresholds updated successfully") if ok else st.error(msg)
+                            ok, _ = set_min_stock(pid, int(min_stock), int(early_warning))
+                            # FIX 2: Always show a clean static message — never dump the
+                            # raw return value from set_min_stock() which can be a long
+                            # verbose string (Delta proto / Streamlit internals).
+                            if ok:
+                                st.success("Thresholds updated successfully")
+                            else:
+                                st.error("Failed to update thresholds. Please try again.")
 
 
 # ═══════════════════════════════════════════════
@@ -654,7 +718,7 @@ elif active == "Update Stock":
                 pid = product_map[selected]
                 product_data = next((p for p in products if p["product_id"] == pid), None)
                 current = (product_data.get("current_stock") or 0) if product_data else 0
-                st.markdown(f'<div class="stock-display"><span class="stock-display-label">Current Stock</span><span class="stock-display-value" style="color:#3b82f6;-webkit-text-fill-color:#3b82f6">{current}</span></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="stock-display"><span class="stock-display-label">Current Stock</span><span class="stock-display-value" style="color:#38bdf8 !important;-webkit-text-fill-color:#38bdf8 !important;text-shadow:0 0 16px rgba(56,189,248,0.4)">{current}</span></div>', unsafe_allow_html=True)
             qty = st.number_input("Quantity to Add / Remove", value=0, help="Positive to add, negative to remove")
             st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
             if st.button("🔄  Apply Adjustment"):
@@ -689,7 +753,7 @@ elif active == "Record Sale":
                 pid = product_map[selected]
                 product_data = next((p for p in products if p["product_id"] == pid), None)
                 current = (product_data.get("current_stock") or 0) if product_data else 0
-                st.markdown(f'<div class="stock-display"><span class="stock-display-label">Available Stock</span><span class="stock-display-value" style="color:#10b981;-webkit-text-fill-color:#10b981">{current}</span></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="stock-display"><span class="stock-display-label">Available Stock</span><span class="stock-display-value" style="color:#fb923c !important;-webkit-text-fill-color:#fb923c !important;text-shadow:0 0 16px rgba(251,146,60,0.4)">{current}</span></div>', unsafe_allow_html=True)
             qty = st.number_input("Quantity Sold", min_value=1, value=1)
             st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
             if st.button("🛒  Record Sale"):
